@@ -4,4 +4,4 @@ spark = SparkSession.builder.appName("Python Spark SQL basic example").config("s
 
 df = spark.read.csv("../train.csv",header=True,sep="\t");
 
-print(df.collect(1))
+print(df.collect())
