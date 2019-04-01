@@ -12,7 +12,6 @@ def lower_clean_str(x):
 
 lcs=udf(lower_clean_str)
 spark = SparkSession.builder.appName("Parsing and removing stopwords").getOrCreate()
-
 df = spark.read.csv("../train.csv",header=False,sep="\t");
 df=df.withColumn("_c1",lcs("_c1"))
 expres = [split(col("_c1")," ").alias("_c1")]
