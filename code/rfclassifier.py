@@ -1,6 +1,6 @@
 from pyspark.ml import Pipeline
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator
+from pyspark.ml.classification import LogisticRegression,NaiveBayes
 from pyspark.ml.feature import HashingTF,IDF, StringIndexer, CountVectorizer
 
 def lr_train(data):
@@ -44,7 +44,20 @@ def rf_train(data):
 
 def nb_train(data):
     #Naive Bayes Classifier
-    return
+    label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
+    countVectors = CountVectorizer(inputCol="filtered", outputCol="features", vocabSize=10000, minDF=5)
+    hashingTF = HashingTF(inputCol="filtered", outputCol="rawFeatures", numFeatures=1000)
+    idf = IDF(inputCol=hashingTF.getOutputCol(), outputCol="features", minDocFreq=5)
+    pipeline = Pipeline(stages=[label_stringIdx,countVectors])
+    pipelineFit = pipeline.fit(data)
+    dataset = pipelineFit.transform(data)
+    (trainingData, testData) = dataset.randomSplit([0.7, 0.3], seed=100)
+    nb = NaiveBayes(smoothing=1)
+    model = nb.fit(trainingData)
+    predictions = model.transform(testData)
+    evaluator = BinaryClassificationEvaluator(rawPredictionCol="prediction")
+
+    return evaluator.evaluate(predictions)
 
 '''hashingTF = HashingTF()
 tf = hashingTF.transform(data.rdd)
