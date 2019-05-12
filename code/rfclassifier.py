@@ -8,7 +8,7 @@ def lr_train(data):
     (trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
     countVectors = CountVectorizer(inputCol="filtered", outputCol="cfeatures", vocabSize=10000, minDF=5)
     '''hashingTF = HashingTF(inputCol="filtered", outputCol="rawFeatures", numFeatures=1000)
-    idf = IDF(inputCol=hashingTF.getOutputCol(), outputCol="features")'''
+    idf = IDF(inputCol=hashingTF.getOutputCol(), outputCol="features",minDocFreq=5)'''
     label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
     lr = LogisticRegression(maxIter=20, regParam=0.3, elasticNetParam=0,featuresCol=countVectors.getOutputCol(), labelCol="label")
     pipeline = Pipeline(stages=[label_stringIdx,countVectors,lr])
