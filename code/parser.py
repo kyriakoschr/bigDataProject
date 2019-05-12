@@ -1,7 +1,11 @@
+from nltk.corpus import stopwords
 from pyspark.sql.functions import udf
 from pyspark.sql.functions import col, regexp_replace, split
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import StopWordsRemover
+from rfclassifier import lr_train
+import pyspark.sql.functions as func
+import nltk
 
 def lower_clean_str(x):
   punc='!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
@@ -20,9 +24,15 @@ df = spark.read.csv("../train.csv",header=False,sep="\t");
 df=df.withColumn("_c1",lcs("_c1"))
 #df=df.withColumn("_c1",rews("_c1")) #3/3
 expres = [split(col("_c1")," ").alias("_c1")]
-df=df.select(*expres)
+df=df.withColumn("_c1",*expres)
 remover = StopWordsRemover(inputCol="_c1", outputCol="filtered")
 swlist = remover.getStopWords()
-swlist.append("")
+swlist= swlist + list(set(stopwords.words('english')))+ ['']
 remover.setStopWords(swlist)
-remover.transform(df).select("filtered").show(1,truncate=False)
+final = remover.transform(df.select("_c1"))
+df= df.withColumn('row_index', func.monotonically_increasing_id())
+final = final.withColumn('row_index', func.monotonically_increasing_id())
+#print final.columns
+#print final.first()
+final = final.join(df["row_index","_c0"], on=["row_index"]).drop("row_index").drop("_c1")
+print lr_train(final)

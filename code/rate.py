@@ -1,7 +1,11 @@
+import pyspark.sql.functions as func
+from nltk.corpus import stopwords
 from pyspark.sql.functions import udf
 from pyspark.sql.functions import col, regexp_replace, split
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import StopWordsRemover
+from rfclassifier import lr_train
+import nltk
 import logging
 import sys
 
@@ -38,11 +42,16 @@ def parse_data(path):
         df = df.withColumn("_c1",*expres)
         remover = StopWordsRemover(inputCol="_c1", outputCol="filtered")
         swlist = remover.getStopWords()
-        swlist.append("")
+        swlist= swlist + list(set(stopwords.words('english')))+ ['']
         remover.setStopWords(swlist)
-        remover.transform(df).select("filtered")
+        #remover.transform(df).select("filtered")
+
+        final = remover.transform(df.select("_c1"))
+        df = df.withColumn('row_index', func.monotonically_increasing_id())
+        final = final.withColumn('row_index', func.monotonically_increasing_id())
+        final = final.join(df["row_index", "_c0"], on=["row_index"]).drop("row_index").drop("_c1")
         # fdf.show()
-        return df
+        return final
 
     elif (path == "../test.csv"):
         lcs = udf(lower_clean_str)
@@ -54,10 +63,14 @@ def parse_data(path):
         df = df.select(*expres)
         remover = StopWordsRemover(inputCol="_c0", outputCol="filtered")
         swlist = remover.getStopWords()
-        swlist.append("")
+        swlist= swlist + list(set(stopwords.words('english')))+ ['']
         remover.setStopWords(swlist)
         remover.transform(df).select("filtered").show(1, truncate=False)
-        return df
+        final = remover.transform(df.select("_c1"))
+        df = df.withColumn('row_index', func.monotonically_increasing_id())
+        final = final.withColumn('row_index', func.monotonically_increasing_id())
+        final = final.join(df["row_index", "_c0"], on=["row_index"]).drop("row_index").drop("_c1")
+        return final
 
     else:
         print "Wrong File or Path"
@@ -69,6 +82,9 @@ def main():
     df = parse_data(path)
     df = df.withColumn("_c0", rt("_c0"))
     df.show()
+    (acc_lr,lr) =lr_train(df)
+    print acc_lr
+    print lr
 
 if __name__=="__main__":
     main()
