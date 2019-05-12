@@ -4,7 +4,7 @@ from pyspark.sql.functions import udf
 from pyspark.sql.functions import col, regexp_replace, split
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import StopWordsRemover
-from rfclassifier import lr_train
+from rfclassifier import *
 import nltk
 import logging
 import sys
@@ -82,7 +82,7 @@ def main():
     df = parse_data(path)
     df = df.withColumn("_c0", rt("_c0"))
     df.show()
-    (acc_lr,lr) =lr_train(df)
+    (acc_lr,lr) =rf_train(df)
     print acc_lr
     print lr
 

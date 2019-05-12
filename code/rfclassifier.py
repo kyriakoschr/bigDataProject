@@ -1,7 +1,8 @@
 from pyspark.ml import Pipeline
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.classification import LogisticRegression
-from pyspark.ml.feature import HashingTF,IDF, StringIndexer, CountVectorizer
+from pyspark.ml.feature import HashingTF,IDF, StringIndexer, CountVectorizer, VectorIndexer
+from pyspark.ml.classification import RandomForestClassifier
 
 def lr_train(data):
     #Logistic Regression using Count Vector Features
@@ -40,7 +41,16 @@ def lr2_train(data):
 
 def rf_train(data):
     #Random Forest Classifier
-    return
+    (trainingData, testData) = data.randomSplit([0.9, 0.1], seed = 100)
+    countVectors = CountVectorizer(inputCol = "filtered", outputCol = "rfFeatures", vocabSize = 10000, minDF = 5)
+    label_stringIdx = StringIndexer(inputCol = "_c0", outputCol = "label")
+    rf = RandomForestClassifier(labelCol = "label", featuresCol = "rfFeatures", maxMemoryInMB = 16, numTrees = 100)
+    pipeline = Pipeline(stages = [label_stringIdx,countVectors,rf])
+    pipelineFit = pipeline.fit(trainingData)
+    predictions = pipelineFit.transform(testData)
+    evaluator = MulticlassClassificationEvaluator(predictionCol="prediction")
+
+    return evaluator.evaluate(predictions), rf
 
 def nb_train(data):
     #Naive Bayes Classifier
