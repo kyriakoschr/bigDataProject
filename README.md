@@ -11,7 +11,7 @@ Title: Restaurants classification using Apache Spark
 - [ ] make a function for each classifier 1/3
 - [ ] make a function to call them
 
-#Function Main()
+# Function main()
 -  if (file == train_set)
     - [ ] parse the file and remove stopwords
     - [ ] replace [1, 2, 3] to 0 and [4, 5] to 1
