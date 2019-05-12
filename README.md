@@ -12,14 +12,14 @@ Title: Restaurants classification using Apache Spark
 - [ ] make a function to call them
 
 #Function Main()
-- # if (file == train_set)
+-  if (file == train_set)
     - [ ] parse the file and remove stopwords
     - [ ] replace [1, 2, 3] to 0 and [4, 5] to 1
     - [ ] classify with Logistic Regression
     - [ ] classify with Navy Bayes
     - [ ] classify with Random Forest
     - [ ] compare the result and select the most accuracy classifier
-- # if (file == test_set)
+-  if (file == test_set)
     - [ ] parse the file and remove stopwords
     - [ ] classify with the best accuracy classifier
     - [ ] compare the results with the train_set
