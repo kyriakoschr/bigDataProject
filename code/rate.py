@@ -83,6 +83,7 @@ def main():
     df = df.withColumn("_c0", rt("_c0"))
     df.show()
     '''(acc_lr,lr) =lr_train(df)
+    (acc_lr,lr) =rf_train(df)
     print acc_lr
     print lr'''
     print nb_train(df)
