@@ -1,8 +1,12 @@
+import pyspark as pyspark
 from pyspark.ml import Pipeline
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.ml.classification import LogisticRegression
-from pyspark.ml.feature import HashingTF,IDF, StringIndexer, CountVectorizer, VectorIndexer
+from pyspark.ml.feature import StringIndexer, CountVectorizer, VectorIndexer, HashingTF, IDF
 from pyspark.ml.classification import RandomForestClassifier
+#from pyspark.mllib.feature import HashingTF
+#from pyspark.mllib.feature import IDF
+
 
 def lr_train(data):
     #Logistic Regression using Count Vector Features
@@ -39,18 +43,35 @@ def lr2_train(data):
     evaluator.evaluate(predictions)
     return evaluator.evaluate(predictions), lrModel
 
+
 def rf_train(data):
-    #Random Forest Classifier
+    #Random Forest Classifier 0.60
     (trainingData, testData) = data.randomSplit([0.9, 0.1], seed = 100)
-    countVectors = CountVectorizer(inputCol = "filtered", outputCol = "rfFeatures", vocabSize = 10000, minDF = 5)
+    countVectors = CountVectorizer(inputCol = "filtered", outputCol = "rfFeatures", vocabSize = 200, minDF =7)
     label_stringIdx = StringIndexer(inputCol = "_c0", outputCol = "label")
-    rf = RandomForestClassifier(labelCol = "label", featuresCol = "rfFeatures", maxMemoryInMB = 16, numTrees = 100)
-    pipeline = Pipeline(stages = [label_stringIdx,countVectors,rf])
+    rf = RandomForestClassifier(labelCol = "label", featuresCol = "rfFeatures", numTrees = 10)
+    pipeline = Pipeline(stages = [label_stringIdx, countVectors, rf])
     pipelineFit = pipeline.fit(trainingData)
     predictions = pipelineFit.transform(testData)
     evaluator = MulticlassClassificationEvaluator(predictionCol="prediction")
 
     return evaluator.evaluate(predictions), rf
+
+def rf_train1(data):
+    # Random Forest Classifier 0.53
+    (trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
+    hashingTF = HashingTF(inputCol="filtered", outputCol= "hFeatures", numFeatures=10)
+    #countVectors = CountVectorizer(inputCol="filtered", outputCol="hFeatures", vocabSize=200, minDF=7)
+    idf = IDF(inputCol="hFeatures", outputCol="rfFeatures", minDocFreq = 7)
+    label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
+    rf = RandomForestClassifier(labelCol="label", featuresCol="rfFeatures", numTrees=10)
+    pipeline = Pipeline(stages=[label_stringIdx, hashingTF, idf, rf])
+    pipelineFit = pipeline.fit(trainingData)
+    predictions = pipelineFit.transform(testData)
+    evaluator = MulticlassClassificationEvaluator(predictionCol="prediction")
+
+    return evaluator.evaluate(predictions), rf
+
 
 def nb_train(data):
     #Naive Bayes Classifier
