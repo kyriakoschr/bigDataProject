@@ -8,7 +8,7 @@ Title: Restaurants classification using Apache Spark
 - [x] transform ratings 1,2,3->0 4,5->1
 
 # To do(kyriakos)
-- [ ] make a function for each classifier 2/3
+- [x] make a function for each classifier 2/3
 - [x] make a function to call them
 
 # Function main()
