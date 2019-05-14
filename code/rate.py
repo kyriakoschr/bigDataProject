@@ -76,19 +76,19 @@ def parse_data(path):
 
 def find_best(data):
     classifiers = []
-    classifiers.append(lr_train(data))
-    classifiers.append(rf_train(data))
-    classifiers.append(nb_train(data))
+    classifiers.append(lr_train_cv(data))
+    classifiers.append(rf_train_cv(data))
+    classifiers.append(nb_train_cv(data))
     classifiers.sort(key=lambda tup: tup[0])
     print classifiers
-    print str(classifiers[-1][2].stages[-1])+ " is the best with accuracy: " +str(classifiers[-1][0])
+    #print str(classifiers[-1][2].stages[-1])+ " is the best with accuracy: " +str(classifiers[-1][0])
     return classifiers[-1]
 
 def main():
     spark = SparkSession.builder.appName("Parsing and removing stopwords").getOrCreate()
     df_train = parse_data("../train.csv")
     df_test = parse_data("../test.csv")
-    df = spark.read.csv("../test.csv", header=False, sep="\t");
+    df = spark.read.csv("../test.csv", header=False, sep="\t")
     best=find_best(df_train)
     predictions=best[-1].transform(df_test)
     #predictions.show()

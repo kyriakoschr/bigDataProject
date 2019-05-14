@@ -9,7 +9,47 @@ from pyspark.ml.feature import StringIndexer, CountVectorizer, VectorIndexer, Ha
 from pyspark.ml.classification import RandomForestClassifier
 #from pyspark.mllib.feature import HashingTF
 #from pyspark.mllib.feature import IDF
+from pyspark.ml.tuning import CrossValidator, ParamGridBuilder,TrainValidationSplit
 
+def lr_train_cv(data):
+    #Logistic Regression using Count Vector Features
+    label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
+    lsmodel=label_stringIdx.fit(data)
+    data=lsmodel.transform(data)
+    #(trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
+    countVectors = CountVectorizer(inputCol="filtered", outputCol="cfeatures", vocabSize=10000, minDF=5)
+    '''hashingTF = HashingTF(inputCol="filtered", outputCol="rawFeatures", numFeatures=1000)
+    idf = IDF(inputCol=hashingTF.getOutputCol(), outputCol="features",minDocFreq=5)'''
+    evaluator = BinaryClassificationEvaluator(rawPredictionCol="prediction")
+    lr = LogisticRegression(regParam=0.3, elasticNetParam=0,featuresCol=countVectors.getOutputCol(), labelCol="label")
+    pipeline = Pipeline(stages=[countVectors,lr])
+    grid = ParamGridBuilder().addGrid(lr.maxIter, [20]).build()
+    crossval = CrossValidator(estimator=pipeline,
+                              estimatorParamMaps=grid,
+                              evaluator=evaluator,
+                              numFolds=10)
+    cvmodel=crossval.fit(data)
+    return (evaluator.evaluate(cvmodel.transform(data)),lsmodel.labels,cvmodel)
+
+def lr_train_tvs(data):
+    #Logistic Regression using Count Vector Features
+    label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
+    lsmodel=label_stringIdx.fit(data)
+    data=lsmodel.transform(data)
+    #(trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
+    countVectors = CountVectorizer(inputCol="filtered", outputCol="cfeatures", vocabSize=10000, minDF=5)
+    '''hashingTF = HashingTF(inputCol="filtered", outputCol="rawFeatures", numFeatures=1000)
+    idf = IDF(inputCol=hashingTF.getOutputCol(), outputCol="features",minDocFreq=5)'''
+    evaluator = BinaryClassificationEvaluator(rawPredictionCol="prediction")
+    lr = LogisticRegression(regParam=0.3, elasticNetParam=0,featuresCol=countVectors.getOutputCol(), labelCol="label")
+    pipeline = Pipeline(stages=[countVectors,lr])
+    grid = ParamGridBuilder().addGrid(lr.maxIter, [10,15,20]).build()
+    crossval = TrainValidationSplit(estimator=pipeline,
+                              estimatorParamMaps=grid,
+                              evaluator=evaluator,
+                              trainRatio=0.9)
+    cvmodel=crossval.fit(data)
+    return (evaluator.evaluate(cvmodel.transform(data)),lsmodel.labels,cvmodel)
 
 def lr_train(data):
     #Logistic Regression using Count Vector Features
@@ -64,6 +104,23 @@ def rf_train(data):
     evaluator = MulticlassClassificationEvaluator(predictionCol="prediction")
     return (evaluator.evaluate(predictions), lsmodel.labels, pipelineFit)
 
+def rf_train_cv(data):
+    #Random Forest Classifier 0.60
+    countVectors = CountVectorizer(inputCol = "filtered", outputCol = "rfFeatures", vocabSize = 200, minDF =7)
+    label_stringIdx = StringIndexer(inputCol = "_c0", outputCol = "label")
+    lsmodel=label_stringIdx.fit(data)
+    data=lsmodel.transform(data)
+    evaluator = BinaryClassificationEvaluator(rawPredictionCol="prediction")
+    rf = RandomForestClassifier(labelCol = "label", featuresCol = "rfFeatures")
+    pipeline = Pipeline(stages = [ countVectors, rf])
+    grid = ParamGridBuilder().addGrid(rf.numTrees, [10]).build()
+    crossval = CrossValidator(estimator=pipeline,
+                              estimatorParamMaps=grid,
+                              evaluator=evaluator,
+                              numFolds=10)
+    cvmodel = crossval.fit(data)
+    return (evaluator.evaluate(cvmodel.transform(data)), lsmodel.labels, cvmodel)
+
 def rf_train1(data):
     # Random Forest Classifier 0.53
     (trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
@@ -96,6 +153,26 @@ def nb_train(data):
     evaluator = BinaryClassificationEvaluator(rawPredictionCol="prediction")
 
     return (evaluator.evaluate(predictions),lsmodel.labels,pipelineFit)
+
+def nb_train_cv(data):
+    #Naive Bayes Classifier
+    label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
+    lsmodel=label_stringIdx.fit(data)
+    data=lsmodel.transform(data)
+    #(trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
+    countVectors = CountVectorizer(inputCol="filtered", outputCol="features", vocabSize=10000, minDF=5)
+    evaluator = BinaryClassificationEvaluator(rawPredictionCol="prediction")
+    hashingTF = HashingTF(inputCol="filtered", outputCol="rawFeatures", numFeatures=1000)
+    idf = IDF(inputCol=hashingTF.getOutputCol(), outputCol="features", minDocFreq=5)
+    nb = NaiveBayes()
+    pipeline = Pipeline(stages=[countVectors,nb])
+    grid = ParamGridBuilder().addGrid(nb.smoothing, [1]).build()
+    crossval = CrossValidator(estimator=pipeline,
+                              estimatorParamMaps=grid,
+                              evaluator=evaluator,
+                              numFolds=10)
+    cvmodel = crossval.fit(data)
+    return (evaluator.evaluate(cvmodel.transform(data)), lsmodel.labels, cvmodel)
 
 '''hashingTF = HashingTF()
 tf = hashingTF.transform(data.rdd)
