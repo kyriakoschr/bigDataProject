@@ -52,16 +52,17 @@ def lr2_train(data):
 
 def rf_train(data):
     #Random Forest Classifier 0.60
-    (trainingData, testData) = data.randomSplit([0.9, 0.1], seed = 100)
     countVectors = CountVectorizer(inputCol = "filtered", outputCol = "rfFeatures", vocabSize = 200, minDF =7)
     label_stringIdx = StringIndexer(inputCol = "_c0", outputCol = "label")
+    lsmodel=label_stringIdx.fit(data)
+    data=lsmodel.transform(data)
+    (trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
     rf = RandomForestClassifier(labelCol = "label", featuresCol = "rfFeatures", numTrees = 10)
-    pipeline = Pipeline(stages = [label_stringIdx, countVectors, rf])
+    pipeline = Pipeline(stages = [ countVectors, rf])
     pipelineFit = pipeline.fit(trainingData)
     predictions = pipelineFit.transform(testData)
     evaluator = MulticlassClassificationEvaluator(predictionCol="prediction")
-
-    return evaluator.evaluate(predictions), pipelineFit
+    return (evaluator.evaluate(predictions), lsmodel.labels, pipelineFit)
 
 def rf_train1(data):
     # Random Forest Classifier 0.53

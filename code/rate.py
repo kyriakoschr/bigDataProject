@@ -77,11 +77,11 @@ def parse_data(path):
 def find_best(data):
     classifiers = []
     classifiers.append(lr_train(data))
-    '''classifiers.append([rf_train(data), "rf"])'''
+    classifiers.append(rf_train(data))
     classifiers.append(nb_train(data))
     classifiers.sort(key=lambda tup: tup[0])
     print classifiers
-    print str(classifiers[-1][2].stages[-1])+ " is the best with accuracy:" +str(classifiers[-1][0])
+    print str(classifiers[-1][2].stages[-1])+ " is the best with accuracy: " +str(classifiers[-1][0])
     return classifiers[-1]
 
 def main():
