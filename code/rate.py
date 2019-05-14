@@ -3,7 +3,7 @@ from nltk.corpus import stopwords
 from pyspark.sql.functions import udf
 from pyspark.sql.functions import col, regexp_replace, split
 from pyspark.sql import SparkSession
-from pyspark.ml.feature import StopWordsRemover
+from pyspark.ml.feature import StopWordsRemover, IndexToString
 from rfclassifier import *
 import nltk
 import logging
@@ -34,6 +34,7 @@ def parse_data(path):
     spark = SparkSession.builder.appName("Parsing and removing stopwords").getOrCreate()
     if (path == "../train.csv"):
         lcs = udf(lower_clean_str)
+        rt = udf(rate_transform)
         # rews=udf(remove_extra_ws) #2/3
         df = spark.read.csv(path, header=False, sep="\t");
         df = df.withColumn("_c1", lcs("_c1"))
@@ -50,9 +51,9 @@ def parse_data(path):
         df = df.withColumn('row_index', func.monotonically_increasing_id())
         final = final.withColumn('row_index', func.monotonically_increasing_id())
         final = final.join(df["row_index", "_c0"], on=["row_index"]).drop("row_index").drop("_c1")
+        final = final.withColumn("_c0", rt("_c0"))
         # fdf.show()
         return final
-
     elif (path == "../test.csv"):
         lcs = udf(lower_clean_str)
         # rews=udf(remove_extra_ws) #2/3
@@ -65,28 +66,40 @@ def parse_data(path):
         swlist = remover.getStopWords()
         swlist= swlist + list(set(stopwords.words('english')))+ ['']
         remover.setStopWords(swlist)
-        remover.transform(df).select("filtered").show(1, truncate=False)
-        final = remover.transform(df.select("_c1"))
-        df = df.withColumn('row_index', func.monotonically_increasing_id())
-        final = final.withColumn('row_index', func.monotonically_increasing_id())
-        final = final.join(df["row_index", "_c0"], on=["row_index"]).drop("row_index").drop("_c1")
+        remover.transform(df).select("filtered")
+        final = remover.transform(df.select("_c0"))
         return final
 
     else:
         print "Wrong File or Path"
         return -1
 
+def find_best(data):
+    classifiers = []
+    classifiers.append(lr_train(data))
+    '''classifiers.append([rf_train(data), "rf"])'''
+    classifiers.append(nb_train(data))
+    classifiers.sort(key=lambda tup: tup[0])
+    print classifiers
+    print str(classifiers[-1][2].stages[-1])+ " is the best with accuracy:" +str(classifiers[-1][0])
+    return classifiers[-1]
+
 def main():
-    rt = udf(rate_transform)
-    path = sys.argv[1]
-    df = parse_data(path)
-    df = df.withColumn("_c0", rt("_c0"))
+    spark = SparkSession.builder.appName("Parsing and removing stopwords").getOrCreate()
+    df_train = parse_data("../train.csv")
+    df_test = parse_data("../test.csv")
+    df = spark.read.csv("../test.csv", header=False, sep="\t");
+    best=find_best(df_train)
+    predictions=best[-1].transform(df_test)
+    #predictions.show()
+    converter = IndexToString(inputCol="prediction", outputCol="originalCategory",labels=best[1])
+    converted=converter.transform(predictions)
+    df = df.withColumn('row_index', func.monotonically_increasing_id())
+    converted = converted.withColumn('row_index', func.monotonically_increasing_id())
+    df = df.join( converted["row_index", "originalCategory"], on=["row_index"]).drop("row_index")
     df.show()
-    '''(acc_lr,lr) =lr_train(df)
-    (acc_lr,lr) =rf_train(df)
-    print acc_lr
-    print lr'''
-    print nb_train(df)
+    df.repartition(1).write.csv('../predictions',sep="\t")
+    spark.stop
 
 if __name__=="__main__":
     main()

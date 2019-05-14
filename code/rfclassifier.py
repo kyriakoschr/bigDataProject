@@ -9,19 +9,22 @@ from pyspark.ml.classification import RandomForestClassifier
 
 def lr_train(data):
     #Logistic Regression using Count Vector Features
+    label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
+    lsmodel=label_stringIdx.fit(data)
+    data=lsmodel.transform(data)
     (trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
     countVectors = CountVectorizer(inputCol="filtered", outputCol="cfeatures", vocabSize=10000, minDF=5)
     '''hashingTF = HashingTF(inputCol="filtered", outputCol="rawFeatures", numFeatures=1000)
     idf = IDF(inputCol=hashingTF.getOutputCol(), outputCol="features",minDocFreq=5)'''
-    label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
+
     lr = LogisticRegression(maxIter=20, regParam=0.3, elasticNetParam=0,featuresCol=countVectors.getOutputCol(), labelCol="label")
-    pipeline = Pipeline(stages=[label_stringIdx,countVectors,lr])
+    pipeline = Pipeline(stages=[countVectors,lr])
     pipelineFit = pipeline.fit(trainingData)
     predictions = pipelineFit.transform(testData)
     #predictions.show(5)
-    evaluator = MulticlassClassificationEvaluator(predictionCol="prediction")
+    evaluator = BinaryClassificationEvaluator(rawPredictionCol="prediction")
     #evaluator.evaluate(predictions)
-    return evaluator.evaluate(predictions),lr
+    return (evaluator.evaluate(predictions),lsmodel.labels,pipelineFit)
 
 def lr2_train(data):
     print data.columns
@@ -53,24 +56,24 @@ def rf_train(data):
     predictions = pipelineFit.transform(testData)
     evaluator = MulticlassClassificationEvaluator(predictionCol="prediction")
 
-    return evaluator.evaluate(predictions), rf
+    return evaluator.evaluate(predictions), pipelineFit
 
 def nb_train(data):
     #Naive Bayes Classifier
     label_stringIdx = StringIndexer(inputCol="_c0", outputCol="label")
+    lsmodel=label_stringIdx.fit(data)
+    data=lsmodel.transform(data)
+    (trainingData, testData) = data.randomSplit([0.9, 0.1], seed=100)
     countVectors = CountVectorizer(inputCol="filtered", outputCol="features", vocabSize=10000, minDF=5)
     hashingTF = HashingTF(inputCol="filtered", outputCol="rawFeatures", numFeatures=1000)
     idf = IDF(inputCol=hashingTF.getOutputCol(), outputCol="features", minDocFreq=5)
-    pipeline = Pipeline(stages=[label_stringIdx,countVectors])
-    pipelineFit = pipeline.fit(data)
-    dataset = pipelineFit.transform(data)
-    (trainingData, testData) = dataset.randomSplit([0.7, 0.3], seed=100)
     nb = NaiveBayes(smoothing=1)
-    model = nb.fit(trainingData)
-    predictions = model.transform(testData)
+    pipeline = Pipeline(stages=[countVectors,nb])
+    pipelineFit = pipeline.fit(trainingData)
+    predictions = pipelineFit.transform(testData)
     evaluator = BinaryClassificationEvaluator(rawPredictionCol="prediction")
 
-    return evaluator.evaluate(predictions)
+    return (evaluator.evaluate(predictions),lsmodel.labels,pipelineFit)
 
 '''hashingTF = HashingTF()
 tf = hashingTF.transform(data.rdd)
