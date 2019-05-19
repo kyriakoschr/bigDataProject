@@ -31,7 +31,7 @@ def rate_transform(x):
     return x
 
 def parse_data(path):
-    spark = SparkSession.builder.appName("Parsing and removing stopwords").getOrCreate()
+    spark = SparkSession.builder.appName("BigDataProject").getOrCreate()
     if (path == "../train.csv"):
         lcs = udf(lower_clean_str)
         rt = udf(rate_transform)
@@ -58,6 +58,7 @@ def parse_data(path):
         lcs = udf(lower_clean_str)
         # rews=udf(remove_extra_ws) #2/3
         df = spark.read.csv(path, header=False, sep="\t");
+        initial=df
         df = df.withColumn("_c0", lcs("_c0"))
         # df=df.withColumn("_c1",rews("_c1")) #3/3
         expres = [split(col("_c0"), " ").alias("_c0")]
@@ -68,7 +69,7 @@ def parse_data(path):
         remover.setStopWords(swlist)
         remover.transform(df).select("filtered")
         final = remover.transform(df.select("_c0"))
-        return final
+        return final,initial
 
     else:
         print "Wrong File or Path"
@@ -77,18 +78,22 @@ def parse_data(path):
 def find_best(data):
     classifiers = []
     classifiers.append(lr_train_cv(data))
+    print "lr trained"
     classifiers.append(rf_train_cv(data))
+    print "rf trained"
     classifiers.append(nb_train_cv(data))
+    print "nb trained"
     classifiers.sort(key=lambda tup: tup[0])
     print classifiers
     #print str(classifiers[-1][2].stages[-1])+ " is the best with accuracy: " +str(classifiers[-1][0])
     return classifiers[-1]
 
 def main():
-    spark = SparkSession.builder.appName("Parsing and removing stopwords").getOrCreate()
+    spark = SparkSession.builder.appName("BigDataProject").getOrCreate()
     df_train = parse_data("../train.csv")
-    df_test = parse_data("../test.csv")
-    df = spark.read.csv("../test.csv", header=False, sep="\t")
+    df_test,df = parse_data("../test.csv")
+    #df_train.cache()
+    df_test.cache()
     best=find_best(df_train)
     predictions=best[-1].transform(df_test)
     #predictions.show()
